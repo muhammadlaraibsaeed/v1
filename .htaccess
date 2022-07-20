@@ -1,0 +1,6 @@
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# http://localhost/v1/task for add student data 
+RewriteRule ^info$ controller/task.php/ [L]
