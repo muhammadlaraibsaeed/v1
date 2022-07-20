@@ -392,8 +392,8 @@ if (array_key_exists("taskid",$_GET)) {
   } 
 }
 
-
 // handle getting all tasks or creating a new one
+
 elseif(empty($_GET)) {
   // if request is a GET e.g. get tasks
   if($_SERVER['REQUEST_METHOD'] === 'GET') {
