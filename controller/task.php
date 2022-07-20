@@ -451,11 +451,11 @@ elseif(empty($_GET)) {
       $response->send();
       exit;
     }
-  }
+}
   
   // else if request is a POST e.g. create task info post
-  elseif($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
+elseif($_SERVER['REQUEST_METHOD'] === 'POST') {
+  
     // create task
     try {
       // check request's content type header is JSON
@@ -506,7 +506,7 @@ elseif(empty($_GET)) {
         $row =$query->fetch(PDO::FETCH_ASSOC);
      }
 
-//  for develop relation with student and section table
+    //  for develop relation with student and section table
      $return_classname =$row['classname'];
      $return_classid =$row['id'];
      
@@ -527,7 +527,7 @@ elseif(empty($_GET)) {
           $query->execute();
           $row =$query->fetch(PDO::FETCH_ASSOC);
      }
-//  for develop relation with student 
+    //  for develop relation with student 
      $return_sectionid =$row['id'];
      $return_sectionname =$row['id'];
      echo $return_sectionid;
@@ -616,7 +616,7 @@ elseif(empty($_GET)) {
       $response->setData($returnData);
       $response->send();
       exit;      
-    }
+ }
     // if task fails to create due to data types, missing fields or invalid data then send error json
     catch(TaskException $ex) {
       $response = new Response();
