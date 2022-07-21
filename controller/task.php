@@ -393,67 +393,79 @@ if (array_key_exists("taskid",$_GET)) {
 }
 
 // handle getting all tasks or creating a new one
+elseif(array_key_exists("classname",$_GET)){
 
-elseif(empty($_GET)) {
-  // if request is a GET e.g. get tasks
-  if($_SERVER['REQUEST_METHOD'] === 'GET') {
+      if(isset($_GET)) {
+        // if request is a GET e.g. get tasks
+        if($_SERVER['REQUEST_METHOD'] === 'GET') {
+          
+          // attempt to query the database
+          try {
+            // create db query
+          
+            $search_class= $_GET['classname'];
+            $query = $readDB->prepare('SELECT s.id AS id , s.NAME AS name , s.fname AS fname, DATE_FORMAT(s.birthday, "%d/%m/%Y") AS dob, s.age AS age,c.classname AS classname ,se.sname AS section_name FROM student AS s INNER JOIN class AS c ON  s.classid=c.id INNER JOIN section as se ON se.id=s.sectionid where c.classname=:search_classname');
+            $query->bindParam(':search_classname', $search_class, PDO::PARAM_STR);
+            $query->execute();
 
-    // attempt to query the database
-    try {
-      // create db query
-      $query = $readDB->prepare('SELECT id, name, fname, DATE_FORMAT(dob, "%d/%m/%Y %H:%i") as dob, age from tbltasks');
-      $query->execute();
+            // get row count
+            $rowCount = $query->rowCount();
 
-      // get row count
-      $rowCount = $query->rowCount();
+            // create task array to store returned tasks
+            $taskArray = array();
+            // for each row returned
+            while($row = $query->fetch(PDO::FETCH_ASSOC)) {
+              // create new task object for each row
+              $task = new Task($row['id'], $row['name'], $row['fname'], $row['dob'], $row['age'],$row['classname'],$row["section_name"]);
 
-      // create task array to store returned tasks
-      $taskArray = array();
+              // create task and store in array for return in json data
+              $taskArray[] = $task->returnTaskAsArray();
+            }
 
-      // for each row returned
-      while($row = $query->fetch(PDO::FETCH_ASSOC)) {
-        // create new task object for each row
-        $task = new Task($row['id'], $row['name'], $row['fname'], $row['dob'], $row['age'],$row['class_name'],$row["section_name"]);
+            // bundle tasks and rows returned into an array to return in the json data
+            $returnData = array();
+            $returnData['rows_returned'] = $rowCount;
+            $returnData['tasks'] = $taskArray;
 
-        // create task and store in array for return in json data
-        $taskArray[] = $task->returnTaskAsArray();
-      }
-
-      // bundle tasks and rows returned into an array to return in the json data
-      $returnData = array();
-      $returnData['rows_returned'] = $rowCount;
-      $returnData['tasks'] = $taskArray;
-
-      // set up response for successful return
-      $response = new Response();
-      $response->setHttpStatusCode(200);
-      $response->setSuccess(true);
-      $response->toCache(true);
-      $response->setData($returnData);
-      $response->send();
-      exit;
-    }
-    // if error with sql query return a json error
-    catch(TaskException $ex) {
-      $response = new Response();
-      $response->setHttpStatusCode(500);
-      $response->setSuccess(false);
-      $response->addMessage($ex->getMessage());
-      $response->send();
-      exit;
-    }
-    catch(PDOException $ex) {
-      error_log("Database Query Error: ".$ex, 0);
-      $response = new Response();
-      $response->setHttpStatusCode(500);
-      $response->setSuccess(false);
-      $response->addMessage("Failed to get tasks");
-      $response->send();
-      exit;
-    }
+            // set up response for successful return
+            $response = new Response();
+            $response->setHttpStatusCode(200);
+            $response->setSuccess(true);
+            $response->toCache(true);
+            $response->setData($returnData);
+            $response->send();
+            exit;
+          }
+          // if error with sql query return a json error
+          catch(TaskException $ex) {
+            $response = new Response();
+            $response->setHttpStatusCode(500);
+            $response->setSuccess(false);
+            $response->addMessage($ex->getMessage());
+            $response->send();
+            exit;
+          }
+          catch(PDOException $ex) {
+            error_log("Database Query Error: ".$ex, 0);
+            $response = new Response();
+            $response->setHttpStatusCode(500);
+            $response->setSuccess(false);
+            $response->addMessage("Failed to get tasks");
+            $response->send();
+            exit;
+          }
+  }
+  // if any other request method apart from GET or POST is used then return 405 method not allowed
+  else {
+    $response = new Response();
+    $response->setHttpStatusCode(405);
+    $response->setSuccess(false);
+    $response->addMessage("Request method not allowed");
+    $response->send();
+    exit;
+  } 
 }
-  
-  // else if request is a POST e.g. create task info post
+} // else if request is a POST e.g. create task info post
 elseif($_SERVER['REQUEST_METHOD'] === 'POST') {
   
     // create task
@@ -530,7 +542,6 @@ elseif($_SERVER['REQUEST_METHOD'] === 'POST') {
     //  for develop relation with student 
      $return_sectionid =$row['id'];
      $return_sectionname =$row['id'];
-     echo $return_sectionid;
 
      if(!isset($jsonData->name) || !isset($jsonData->age)|| !isset($jsonData->classname) || !isset($jsonData->fname)) {
         $response = new Response();
@@ -572,10 +583,9 @@ elseif($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
       
       // get last task id so we can return the Task in the json
-      $lastTaskID = $writeDB->lastInsertId();
-     echo "<h1>".$lastTaskID."</h1>";      
+      $lastTaskID = $writeDB->lastInsertId();     
       // create db query to get newly created task - get from master db not read slave as replication may be too slow for successful read
-      $query = $writeDB->prepare('SELECT s.id AS id , s.NAME AS name , s.fname AS fname, DATE_FORMAT(s.birthday, "%d/%m/%Y") AS dob, s.age AS age,c.classname AS classname ,se.sname AS section_name FROM student AS s INNER JOIN class AS c ON  s.classid=c.id INNER JOIN section as se ON se.id=s.sectionid where s.id=:taskid         ');
+      $query = $writeDB->prepare('SELECT s.id AS id , s.NAME AS name , s.fname AS fname, DATE_FORMAT(s.birthday, "%d/%m/%Y") AS dob, s.age AS age,c.classname AS classname ,se.sname AS section_name FROM student AS s INNER JOIN class AS c ON  s.classid=c.id INNER JOIN section as se ON se.id=s.sectionid where s.id=:taskid');
       $query->bindParam(':taskid', $lastTaskID, PDO::PARAM_INT);
       $query->execute();
 
@@ -636,23 +646,15 @@ elseif($_SERVER['REQUEST_METHOD'] === 'POST') {
       $response->send();
       exit;
     }
-  }
-  // if any other request method apart from GET or POST is used then return 405 method not allowed
-  else {
-    $response = new Response();
-    $response->setHttpStatusCode(405);
-    $response->setSuccess(false);
-    $response->addMessage("Request method not allowed");
-    $response->send();
-    exit;
-  } 
 }
+  
+
 // return 404 error if endpoint not available
 else {
   $response = new Response();
   $response->setHttpStatusCode(404);
   $response->setSuccess(false);
-  $response->addMessage("Endpoint not found");
+  $response->addMessage("Endpoint not found  ".$_SERVER['REQUEST_METHOD']);
   $response->send();
   exit;
 }

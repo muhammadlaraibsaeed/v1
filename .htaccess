@@ -2,5 +2,9 @@ RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# http://localhost/v1/task for add student data 
-RewriteRule ^info$ controller/task.php/ [L]
+# http://localhost/v1/adddata for add student data 
+RewriteRule ^adddata$ controller/task.php/ [L]
+
+# RewriteRule    ^sessions/([0-9]+)$          controller/sessions.php?sessionid=$1    [L]
+
+RewriteRule ^search/(\w.+)$ controller/task.php?classname=$1 [L]
