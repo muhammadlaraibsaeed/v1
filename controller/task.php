@@ -24,12 +24,11 @@ catch(PDOException $ex) {
 // check if taskid is in the url e.g. /tasks/1
 
 // check if taskid is in the url e.g. /tasks/1
-if (array_key_exists("taskid",$_GET)) {
+if (array_key_exists("studentid",$_GET)) {
+  $studentid = $_GET['studentid'];
   // get task id from query string
-  $taskid = $_GET['taskid'];
-
   //check to see if task id in query string is not empty and is number, if not return json error
-  if($taskid == '' || !is_numeric($taskid)) {
+  if($studentid == '' || !is_numeric($studentid)) {
     $response = new Response();
     $response->setHttpStatusCode(400);
     $response->setSuccess(false);
@@ -43,8 +42,9 @@ if (array_key_exists("taskid",$_GET)) {
     // attempt to query the database
     try {
       // create db query
-      $query = $readDB->prepare('SELECT id, name, fname, DATE_FORMAT(dob, "%d/%m/%Y %H:%i") as dob, age from tbltasks where id = :taskid');
-      $query->bindParam(':taskid', $taskid, PDO::PARAM_INT);
+      
+      $query = $readDB->prepare('SELECT s.id AS id , s.NAME AS name , s.fname AS fname, DATE_FORMAT(s.birthday, "%d/%m/%Y") AS dob, s.age AS age,c.classname AS classname ,se.sname AS section_name FROM student AS s INNER JOIN class AS c ON  s.classid=c.id INNER JOIN section as se ON se.id=s.sectionid  where s.id = :stduentid');
+      $query->bindParam(':stduentid', $studentid, PDO::PARAM_INT);
   		$query->execute();
 
       // get row count
@@ -58,16 +58,14 @@ if (array_key_exists("taskid",$_GET)) {
         $response = new Response();
         $response->setHttpStatusCode(404);
         $response->setSuccess(false);
-        $response->addMessage("Task not found");
+        $response->addMessage("Such id student is not found");
         $response->send();
         exit;
       }
-
       // for each row returned
       while($row = $query->fetch(PDO::FETCH_ASSOC)) {
         // create new task object for each row
-        $task = new Task($row['id'], $row['name'], $row['fname'], $row['dob'], $row['age'],$row['class_name'],$row["section_name"]);
-
+        $task = new Task($row['id'], $row['name'], $row['fname'], $row['dob'], $row['age'],$row['classname'],$row["section_name"]);
         // create task and store in array for return in json data
   	    $taskArray[] = $task->returnTaskAsArray();
       }
@@ -75,8 +73,7 @@ if (array_key_exists("taskid",$_GET)) {
       // bundle tasks and rows returned into an array to return in the json data
       $returnData = array();
       $returnData['rows_returned'] = $rowCount;
-      $returnData['tasks'] = $taskArray;
-
+      $returnData['student detail'] = $taskArray;
       // set up response for successful return
       $response = new Response();
       $response->setHttpStatusCode(200);
@@ -110,10 +107,9 @@ if (array_key_exists("taskid",$_GET)) {
     // attempt to query the database
     try {
       // create db query
-      $query = $writeDB->prepare('delete from tbltasks where id = :taskid');
-      $query->bindParam(':taskid', $taskid, PDO::PARAM_INT);
+      $query = $writeDB->prepare('delete from student where id = :stduentid');
+      $query->bindParam(':stduentid', $studentid, PDO::PARAM_INT);
       $query->execute();
-
       // get row count
       $rowCount = $query->rowCount();
 
@@ -122,7 +118,7 @@ if (array_key_exists("taskid",$_GET)) {
         $response = new Response();
         $response->setHttpStatusCode(404);
         $response->setSuccess(false);
-        $response->addMessage("Task not found");
+        $response->addMessage("Student is not found");
         $response->send();
         exit;
       }
@@ -130,7 +126,7 @@ if (array_key_exists("taskid",$_GET)) {
       $response = new Response();
       $response->setHttpStatusCode(200);
       $response->setSuccess(true);
-      $response->addMessage("Task deleted");
+      $response->addMessage("Student at id". $studentid." deleted successfully");
       $response->send();
       exit;
     }
@@ -145,7 +141,7 @@ if (array_key_exists("taskid",$_GET)) {
     }
   }
   // handle updating task
-  elseif($_SERVER['REQUEST_METHOD'] === 'PATCH') {
+  elseif($_SERVER['REQUEST_METHOD'] === 'PATCH'||$_SERVER['REQUEST_METHOD'] === 'PUT') {
     // update task
     try {
       // check request's content type header is JSON
@@ -464,8 +460,9 @@ elseif(array_key_exists("classname",$_GET)){
     $response->send();
     exit;
   } 
-}
-} // else if request is a POST e.g. create task info post
+  }
+} 
+// else if request is a POST e.g. create task info post
 elseif($_SERVER['REQUEST_METHOD'] === 'POST') {
   
     // create task
@@ -647,7 +644,6 @@ elseif($_SERVER['REQUEST_METHOD'] === 'POST') {
       exit;
     }
 }
-  
 
 // return 404 error if endpoint not available
 else {

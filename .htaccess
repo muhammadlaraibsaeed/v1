@@ -6,5 +6,8 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^adddata$ controller/task.php/ [L]
 
 # RewriteRule    ^sessions/([0-9]+)$          controller/sessions.php?sessionid=$1    [L]
-
+# for search all student in specific class
 RewriteRule ^search/(\w.+)$ controller/task.php?classname=$1 [L]
+
+# for search all student in specific class
+RewriteRule ^student/(\d+)$ controller/task.php?studentid=$1 [L]
