@@ -198,7 +198,7 @@ if (array_key_exists("studentid",$_GET)) {
         // set dob field updated to true
         $dob_updated = true;
         // add dob field to query field string
-        $queryFields .= "dob = STR_TO_DATE(:dob, '%d/%m/%Y %H:%i'), ";
+        $queryFields .= "dob = STR_TO_DATE(:dob, '%d/%m/%Y'), ";
       }
       
       // check if age exists in PATCH
@@ -506,7 +506,7 @@ elseif($_SERVER['REQUEST_METHOD'] === 'POST') {
       $query->execute();
       $row =$query->fetch(PDO::FETCH_ASSOC);
        if($row===false){
-        $query = $readDB->prepare("INSERT INTO class(classname)VALUE(:classname)");
+        $query = $readDB->prepare("INSERT INTO class (classname) VALUE (:classname)");
         $query->bindParam(':classname', $classname, PDO::PARAM_STR);
         $query->execute();
         $query = $readDB->prepare("SELECT * from class WHERE classname = :classname");
