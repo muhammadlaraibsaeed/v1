@@ -123,7 +123,10 @@ class Task {
 	public function setsection($section_name) {
 		// if passed in task ID is not null or not numeric, is not between 0 and 9223372036854775807 (signed bigint max val - 64bit)
 			// over nine quintillion rows
-			if(strlen($section_name) < 1 || strlen($section_name) > 255) {
+			if($section_name===null){
+				$section_name = "mixed section";
+			}
+			if( strlen($section_name<1) || strlen($section_name) > 255 ) {
 				throw new TaskException("section name error");		
 			}
 			$this->_sname = $section_name;
@@ -145,7 +148,7 @@ class Task {
 		$task = array();
 		$task['id'] = $this->getID();
 		$task['Name'] = $this->getname();
-		$task['Fname'] = $this->getfname();
+		$task['Father name'] = $this->getfname();
 		$task['Date Of Birth'] = $this->getdob();
 		$task['Age'] = $this->getage();
 		$task['class name'] = $this->getclass();

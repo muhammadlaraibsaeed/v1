@@ -27,12 +27,12 @@ catch(PDOException $ex) {
 if (array_key_exists("studentid",$_GET)) {
   $studentid = $_GET['studentid'];
   // get task id from query string
-  //check to see if task id in query string is not empty and is number, if not return json error
+  //check to see if student id in query string is not empty and is number, if not return json error
   if($studentid == '' || !is_numeric($studentid)) {
     $response = new Response();
     $response->setHttpStatusCode(400);
     $response->setSuccess(false);
-    $response->addMessage("Task ID cannot be blank or must be numeric");
+    $response->addMessage("student ID cannot be blank or must be numeric");
     $response->send();
     exit;
   }
@@ -107,7 +107,7 @@ if (array_key_exists("studentid",$_GET)) {
     // attempt to query the database
     try {
       // create db query
-      $query = $writeDB->prepare('delete from student where id = :stduentid');
+      $query = $writeDB->prepare('DELETE FROM student WHERE id = :stduentid');
       $query->bindParam(':stduentid', $studentid, PDO::PARAM_INT);
       $query->execute();
       // get row count
@@ -168,12 +168,54 @@ if (array_key_exists("studentid",$_GET)) {
         exit;
       }
       
+      // For Checking class is exist or not if class is exist then continue the process otherwise ask to use 
+      // please confirm class name
+      $classname = $jsonData->classname;
+      $query = $writeDB->prepare('SELECT * from class where classname = :classname');
+      $query->bindParam(':classname', $classname, PDO::PARAM_INT);
+      $query->execute();  
+      $row = $query->fetch(PDO::FETCH_ASSOC);
+      $return_classid=$row['id'];
+      
+       // get row count
+       $rowCount = $query->rowCount();
+       // make sure that the task exists for a given task id
+       if($rowCount === 0) {
+         // set up response for unsuccessful return
+         $response = new Response();
+         $response->setHttpStatusCode(404);
+         $response->setSuccess(false);
+         $response->addMessage("You Enter Wrong Class Name");
+         $response->send();
+         exit;
+       }
+
+     if(isset($jsonData->sectionname)){
+      // checking section is exist or not
+      $section_name = $jsonData->sectionname;
+        $query = $writeDB->prepare('SELECT * from section where sname = :sename');
+        $query->bindParam(':sename', $section_name, PDO::PARAM_INT);
+        $query->execute();  
+        // get row count
+        $rowCount = $query->rowCount();
+        // make sure that the task exists for a given task id
+        if($rowCount === 0) {
+          // set up response for unsuccessful return
+          $response = new Response();
+          $response->setHttpStatusCode(404);
+          $response->setSuccess(false);
+          $response->addMessage("You Enter Wrong Section");
+          $response->send();
+          exit;
+        }
+     }
       // set task field updated to false initially
       $name_updated = false;
       $fname_updated = false;
       $dob_updated = false;
       $age_updated = false;
-      
+      $classname_update =false;
+      $sectioname_update=false;
       // create blank query fields string to append each field to
       $queryFields = "";
       
@@ -208,25 +250,31 @@ if (array_key_exists("studentid",$_GET)) {
         // add age field to query field string
         $queryFields .= "age = :age, ";
       }
+
+      // check if classname exists in PATCH
+      // if(isset($jsonData->classname)) {
+      //   // set classname field updated to true
+      //   $age_updated = true;
+      //   // add age field to query field string
+      //   $queryFields .= "age = :age, ";
+      // }
       
       // remove the right hand comma and trailing space
       $queryFields = rtrim($queryFields, ", ");
-      
+
       // check if any task fields supplied in JSON
       if($name_updated === false && $fname_updated === false && $dob_updated === false && $age_updated === false) {
         $response = new Response();
         $response->setHttpStatusCode(400);
         $response->setSuccess(false);
-        $response->addMessage("No task fields provided");
+        $response->addMessage("You Much provide data");
         $response->send();
         exit;
       }
-      
       // create db query to get task from database to update - use master db
-      $query = $writeDB->prepare('SELECT id, name, fname, DATE_FORMAT(dob, "%d/%m/%Y %H:%i") as dob, age from tbltasks where id = :taskid');
-      $query->bindParam(':taskid', $taskid, PDO::PARAM_INT);
+      $query = $writeDB->prepare('SELECT s.id AS id , s.NAME AS name , s.fname AS fname, DATE_FORMAT(s.birthday, "%d/%m/%Y") AS dob, s.age AS age,c.classname AS classname ,se.sname AS section_name FROM student AS s INNER JOIN class AS c ON  s.classid=c.id INNER JOIN section as se ON se.id=s.sectionid where s.id = :studentid');
+      $query->bindParam(':studentid', $studentid, PDO::PARAM_INT);
       $query->execute();
-
       // get row count
       $rowCount = $query->rowCount();
 
@@ -236,7 +284,7 @@ if (array_key_exists("studentid",$_GET)) {
         $response = new Response();
         $response->setHttpStatusCode(404);
         $response->setSuccess(false);
-        $response->addMessage("No task found to update");
+        $response->addMessage("No data is found at id ".$studentid);
         $response->send();
         exit;
       }
@@ -244,11 +292,10 @@ if (array_key_exists("studentid",$_GET)) {
       // for each row returned - should be just one
       while($row = $query->fetch(PDO::FETCH_ASSOC)) {
         // create new task object
-        $task = new Task($row['id'], $row['name'], $row['fname'], $row['dob'], $row['age'],$row['class_name'],$row["section_name"]);
+        $task = new Task($row['id'], $row['name'], $row['fname'], $row['dob'], $row['age'],$row['classname'],$row['section_name']);
       }
-      
       // create the query string including any query fields
-      $queryString = "update tbltasks set ".$queryFields." where id = :taskid";
+      $queryString = "update student set ".$queryFields." where id = :studentid";
       // prepare the query
       $query = $writeDB->prepare($queryString);
       
@@ -297,7 +344,7 @@ if (array_key_exists("studentid",$_GET)) {
       }
       
       // bind the task id provided in the query string
-      $query->bindParam(':taskid', $taskid, PDO::PARAM_INT);
+      $query->bindParam(':studentid', $studentid, PDO::PARAM_INT);
       // run the query
     	$query->execute();
       
@@ -316,8 +363,8 @@ if (array_key_exists("studentid",$_GET)) {
       }
       
       // create db query to return the newly edited task - connect to master database
-      $query = $writeDB->prepare('SELECT id, name, fname, DATE_FORMAT(dob, "%d/%m/%Y %H:%i") as dob, age from tbltasks where id = :taskid');
-      $query->bindParam(':taskid', $taskid, PDO::PARAM_INT);
+      $query = $writeDB->prepare('SELECT s.id AS id , s.NAME AS name , s.fname AS fname, DATE_FORMAT(s.birthday, "%d/%m/%Y") AS dob, s.age AS age,c.classname AS classname ,se.sname AS section_name FROM student AS s INNER JOIN class AS c ON  s.classid=c.id INNER JOIN section as se ON se.id=s.sectionid where s.id = :studentid');
+      $query->bindParam(':studentid', $studentid, PDO::PARAM_INT);
       $query->execute();
 
       // get row count
@@ -329,7 +376,7 @@ if (array_key_exists("studentid",$_GET)) {
         $response = new Response();
         $response->setHttpStatusCode(404);
         $response->setSuccess(false);
-        $response->addMessage("No task found");
+        $response->addMessage("No student found");
         $response->send();
         exit;
       }
@@ -339,7 +386,7 @@ if (array_key_exists("studentid",$_GET)) {
       // for each row returned
       while($row = $query->fetch(PDO::FETCH_ASSOC)) {
         // create new task object for each row returned
-        $task = new Task($row['id'], $row['name'], $row['fname'], $row['dob'], $row['age'],$row['class_name'],$row["section_name"]);
+        $task = new Task($row['id'], $row['name'], $row['fname'], $row['dob'], $row['age'],$row['classname'],$row['section_name']);
 
         // create task and store in array for return in json data
         $taskArray[] = $task->returnTaskAsArray();
@@ -362,7 +409,7 @@ if (array_key_exists("studentid",$_GET)) {
       $response = new Response();
       $response->setHttpStatusCode(400);
       $response->setSuccess(false);
-      $response->addMessage($ex->getMessage());
+      $response->addMessage($ex->getMessage()."".$ex->getLine());
       $response->send();
       exit;
     }
@@ -372,7 +419,7 @@ if (array_key_exists("studentid",$_GET)) {
       $response = new Response();
       $response->setHttpStatusCode(500);
       $response->setSuccess(false);
-      $response->addMessage("Failed to update task - check your data for errors");
+      $response->addMessage("Failed to update task - check your data for errors ".$ex->getMessage()." Line ".$ex->getLine());
       $response->send();
       exit;
     }
@@ -400,20 +447,26 @@ elseif(array_key_exists("classname",$_GET)){
             // create db query
           
             $search_class= $_GET['classname'];
-            $query = $readDB->prepare('SELECT s.id AS id , s.NAME AS name , s.fname AS fname, DATE_FORMAT(s.birthday, "%d/%m/%Y") AS dob, s.age AS age,c.classname AS classname ,se.sname AS section_name FROM student AS s INNER JOIN class AS c ON  s.classid=c.id INNER JOIN section as se ON se.id=s.sectionid where c.classname=:search_classname');
+            $query = $readDB->prepare('SELECT s.id AS id , s.NAME AS name , s.fname AS fname, DATE_FORMAT(s.birthday, "%d/%m/%Y") AS dob, s.age AS age,c.classname AS  classname ,se.sname AS section_name FROM student AS s INNER JOIN class AS c ON  s.classid=c.id LEFT JOIN section as se ON se.id=s.sectionid where c.classname = :search_classname');
             $query->bindParam(':search_classname', $search_class, PDO::PARAM_STR);
             $query->execute();
-
             // get row count
             $rowCount = $query->rowCount();
-
+            if($rowCount === 0) {
+              // set up response for unsuccessful return
+              $response = new Response();
+              $response->setHttpStatusCode(500);
+              $response->setSuccess(false);
+              $response->addMessage("student Don't exist in this class");
+              $response->send();
+              exit;
+            }
             // create task array to store returned tasks
             $taskArray = array();
             // for each row returned
             while($row = $query->fetch(PDO::FETCH_ASSOC)) {
-              // create new task object for each row
+              // create new task object for each row 
               $task = new Task($row['id'], $row['name'], $row['fname'], $row['dob'], $row['age'],$row['classname'],$row["section_name"]);
-
               // create task and store in array for return in json data
               $taskArray[] = $task->returnTaskAsArray();
             }
@@ -422,7 +475,6 @@ elseif(array_key_exists("classname",$_GET)){
             $returnData = array();
             $returnData['rows_returned'] = $rowCount;
             $returnData['tasks'] = $taskArray;
-
             // set up response for successful return
             $response = new Response();
             $response->setHttpStatusCode(200);
@@ -437,7 +489,7 @@ elseif(array_key_exists("classname",$_GET)){
             $response = new Response();
             $response->setHttpStatusCode(500);
             $response->setSuccess(false);
-            $response->addMessage($ex->getMessage());
+            $response->addMessage($ex->getMessage()." ".$ex->getLine());
             $response->send();
             exit;
           }
@@ -446,7 +498,7 @@ elseif(array_key_exists("classname",$_GET)){
             $response = new Response();
             $response->setHttpStatusCode(500);
             $response->setSuccess(false);
-            $response->addMessage("Failed to get tasks");
+            $response->addMessage("Failed to get tasks ".$ex->getMessage());
             $response->send();
             exit;
           }
