@@ -3,11 +3,17 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 # http://localhost/v1/adddata for add student data 
-RewriteRule ^adddata$ controller/task.php/ [L]
+RewriteRule ^addinfo$ controller/task.php/ [L]
 
 # RewriteRule    ^sessions/([0-9]+)$          controller/sessions.php?sessionid=$1    [L]
 # for search all student in specific class
 RewriteRule ^search/(\w.+)$ controller/task.php?classname=$1 [L]
 
-# for search all student in specific class
+# for search update or delete of specific  student 
 RewriteRule ^student/(\d+)$ controller/task.php?studentid=$1 [L]
+
+# for update or delete of specific  class 
+RewriteRule ^class/(\d+)$ controller/task.php?classid=$1 [L]
+
+# for update or delete of specific  section 
+RewriteRule ^section/(\d+)$ controller/task.php?sectionid=$1 [L]

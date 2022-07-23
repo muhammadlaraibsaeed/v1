@@ -137,7 +137,7 @@ class Task {
 	public function setage($age) {
 		// if passed in task ID is not null or not numeric, is not between 0 and 9223372036854775807 (signed bigint max val - 64bit)
 			// over nine quintillion rows
-			if(($age !== null) && (!is_numeric($age) || $age <= 0 || $age > 9223372036854775807 || $this->_age !== null)) {
+			if(($age !== null) && (!is_numeric($age) || $age <= 0 || $age > 9223372036854775807 || $age==null )) {
 				throw new TaskException("Age error");
 			}
 			$this->_age = $age;
